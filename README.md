@@ -1,5 +1,6 @@
 # EAGLES: Efficient Accelerated 3D Gaussians with Lightweight EncodingS
 [Sharath Girish](https://sharath-girish.github.io/), [Kamal Gupta](https://kampta.github.io/), [Abhinav Shrivastava](https://www.cs.umd.edu/~abhinav/) <br><br>
+<img src="assets/umd.png" width="150"><br><br>
 ![Teaser image](assets/teaser.png)
 
 Official implementation of the paper "EAGLES: Efficient Accelerated 3D Gaussians with Lightweight EncodingS"
