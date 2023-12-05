@@ -1,0 +1,34 @@
+model_params:
+  source_path: 'data/mip-nerf/bicycle'
+  model_path: 'output/exp-bicycle'
+
+quantize_params:
+  features_rest_quant_type: 'sq'
+  features_rest_latent_dim: 16
+  features_rest_ldec_std: 0.0005
+  features_rest_lr_scaling: 0.1
+  features_rest_ldecs_lr: 0.005
+  features_rest_latent_scale_norm: 'div'
+  features_rest_ldecode_matrix: 'dft'
+  rotation_quant_type: 'sq'
+  rotation_latent_dim: 8
+  rotation_ldec_std: 0.01
+  rotation_lr_scaling: 0.1
+  rotation_ldecs_lr: 0.01
+  rotation_latent_scale_norm: 'div'
+  rotation_ldecode_matrix: 'sq'
+  opacity_quant_type: 'sq'
+  opacity_latent_dim: 1
+  opacity_ldec_std: 0.5
+  opacity_lr_scaling: 0.1
+  opacity_ldecs_lr: 0.3
+  opacity_ldecode_matrix: 'sq'
+  opacity_latent_scale_norm: 'none'
+
+opt_params:
+  resize_period: 0.7
+  resize_scale: 0.3
+  transform: 'downsample'
+  opacity_reset_interval: 2500
+  densification_interval: 250
+  log_interval: 100
