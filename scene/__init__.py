@@ -92,7 +92,7 @@ class Scene:
                                     "point_cloud",
                                     "iteration_" + str(self.loaded_iter),
                                     "point_cloud.ply")
-            if os.path.exists(ply_file):
+            if os.path.exists(ply_file) and (type(gaussians) == GaussianModel):
                 self.gaussians.load_ply(ply_file)
             else:
                 self.gaussians.load_compressed_pkl(os.path.join(self.model_path,

@@ -269,12 +269,16 @@ def training(seed, dataset, opt, pipe, quantize, saving_iterations, checkpoint_i
 
             if psnr_train and psnr_train > best_train_psnr:
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
-                # scene.save_best()
+                # Save attributes in uncompressed point cloud .ply format (for visualization)
+                if dataset.save_ply:
+                    scene.save_best()
+                # Save attributes in compress pkl format
                 scene.save_best_compressed(quantize)
                 best_iter = iteration
                 # best_state_dict = gaussians.capture_best_state()
 
-    # scene.link_best(best_iter)
+    if dataset.save_ply:
+        scene.link_best(best_iter)
     scene.link_best_compressed(best_iter)
     # gaussians.restore_best_state(best_state_dict, opt)
     if os.path.exists(os.path.join(scene.model_path, "resume_ckpt.pth")):

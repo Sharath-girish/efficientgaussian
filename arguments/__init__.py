@@ -103,6 +103,7 @@ class ModelParams(ParamGroup):
         self.log_interval = 100
         self.shuffle_seed = 0
         self.save_images = False
+        self.save_ply = False
 
         self.use_wandb = False
         self.wandb_project = "wandb-project"
