@@ -30,5 +30,9 @@ opt_params:
   resize_scale: 0.3
   transform: 'downsample'
   opacity_reset_interval: 2500
-  densification_interval: 250
+  densification_interval: 125
+  densify_until_iter: 18000
+  infl_prune_interval: 5100
+  prune_until_iter: 27000
+  quantile_threshold: 0.15
   log_interval: 100

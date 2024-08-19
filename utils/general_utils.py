@@ -227,12 +227,12 @@ class CompressedLatents(object):
         weight = torch.round(flattened).int()
         unique_vals, counts = torch.unique(weight, return_counts = True)
         probs = counts/torch.sum(counts)
-        tail_idx = torch.where(probs <= 1.0e-5)[0]
+        tail_idx = torch.where(probs <= 1.0e-4)[0]
         tail_vals = unique_vals[tail_idx]
         self.tail_locs = {}
         for val in tail_vals:
-            weight[weight == val] = unique_vals[counts.argmax()]
             self.tail_locs[val.item()] = torch.where(weight == val)[0].detach().cpu()
+            weight[weight == val] = unique_vals[counts.argmax()]
         unique_vals, counts = torch.unique(weight, return_counts = True)
         probs = counts/torch.sum(counts)
         weight = weight.detach().cpu()
@@ -254,12 +254,12 @@ class CompressedLatents(object):
         cdf = torch.tensor(self.cdf).unsqueeze(0).repeat(self.num_latents*self.latent_dim,1)
         weight = torchac.decode_float_cdf(cdf, self.byte_stream)
         weight = weight.to(torch.float32)
-        for val, locs in self.tail_locs.items():
-            weight[locs] = val
         # weight = self.tail_decode(cdf, self.byte_stream, self.tail_vals, self.tail_idx)
         # weight = weight.to(torch.float32)
         inverse_mapping = {v:k for k,v in self.mapping.items()}
         weight.apply_(inverse_mapping.get)
+        for val, locs in self.tail_locs.items():
+            weight[locs] = val
         weight = weight.view(self.num_latents, self.latent_dim)
         return weight
 

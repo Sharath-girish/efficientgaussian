@@ -197,6 +197,9 @@ class OptimizationParams(ParamGroup):
         self.densify_from_iter = 500
         self.densify_until_iter = 15_000
         self.densify_grad_threshold = 0.0002
+        self.infl_prune_interval = 3000
+        self.quantile_threshold = 0.05
+        self.prune_until_iter = 24_000
         self.accumulate_fraction = 0.0
         self.search_best_iters = 0
         self.resize_period = 0.0

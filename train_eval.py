@@ -176,7 +176,8 @@ def training(seed, dataset, opt, pipe, quantize, saving_iterations, checkpoint_i
         if (iteration - 1) == debug_from:
             pipe.debug = True
         with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=opt.use_amp):
-            render_pkg = render(viewpoint_cam, gaussians, pipe, background, image_shape=gt_image.shape)
+            render_pkg = render(viewpoint_cam, gaussians, pipe, background, image_shape=gt_image.shape,
+                                get_infl=iteration<opt.prune_until_iter)
             image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
             Ll1 = l1_loss(image, gt_image)
@@ -224,6 +225,9 @@ def training(seed, dataset, opt, pipe, quantize, saving_iterations, checkpoint_i
                 # scene.save(iteration)
                 scene.save_compressed(iteration, quantize)
 
+            if iteration < opt.prune_until_iter:
+                gaussians.add_influence_stats(render_pkg["influence"])
+
             # Densification
             if iteration < opt.densify_until_iter:
                 # Keep track of max radii in image-space for pruning
@@ -241,6 +245,10 @@ def training(seed, dataset, opt, pipe, quantize, saving_iterations, checkpoint_i
                 
                 if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()
+
+            if iteration % opt.infl_prune_interval == 0 and iteration<opt.prune_until_iter:
+                gaussians.prune_influence(quantile_threshold=opt.quantile_threshold)
+
             # Optimizer step
             if iteration < opt.iterations:
                 if opt.use_amp:

@@ -36,6 +36,8 @@ class GaussianModelSQ(GaussianModel):
         self.max_radii2D = torch.empty(0)
         self.xyz_gradient_accum = torch.empty(0)
         self.denom = torch.empty(0)
+        self.influence = torch.empty(0)
+        self.infl_denom = torch.empty(0)
         self.optimizer = None
         self.percent_dense = 0
         self.spatial_lr_scale = 0
@@ -107,6 +109,8 @@ class GaussianModelSQ(GaussianModel):
             self.max_radii2D,
             self.xyz_gradient_accum,
             self.denom,
+            self.influence,
+            self.infl_denom,
             OrderedDict([(n, l.state_dict()) for n,l in self.latent_decoders.items()]),
             self.optimizer.state_dict(),
             self.spatial_lr_scale,
@@ -118,6 +122,8 @@ class GaussianModelSQ(GaussianModel):
         self.max_radii2D, 
         xyz_gradient_accum, 
         denom,
+        influence,
+        infl_denom,
         ldec_dicts,
         opt_dict, 
         self.spatial_lr_scale) = model_args
@@ -125,6 +131,8 @@ class GaussianModelSQ(GaussianModel):
         self.optimizer.load_state_dict(opt_dict)
         self.xyz_gradient_accum = xyz_gradient_accum
         self.denom = denom
+        self.influence = influence
+        self.infl_denom = infl_denom
         for n in ldec_dicts:
             self.latent_decoders[n].load_state_dict(ldec_dicts[n])
 
@@ -135,6 +143,8 @@ class GaussianModelSQ(GaussianModel):
             self.max_radii2D.detach().cpu(),
             self.xyz_gradient_accum.detach().cpu(),
             self.denom.detach().cpu(),
+            self.influence.detach().cpu(),
+            self.infl_denom.detach().cpu(),
             OrderedDict([(n, {k: v.detach().cpu() for k, v in l.state_dict().items()}) for n,l in self.latent_decoders.items()]),
             self.spatial_lr_scale,
         )
@@ -145,6 +155,8 @@ class GaussianModelSQ(GaussianModel):
         self.max_radii2D, 
         xyz_gradient_accum, 
         denom,
+        influence,
+        infl_denom,
         ldec_dicts,
         self.spatial_lr_scale) = model_args
         self.training_setup(training_args)
@@ -152,6 +164,8 @@ class GaussianModelSQ(GaussianModel):
         self.max_radii2D = self.max_radii2D.cuda()
         self.xyz_gradient_accum = xyz_gradient_accum.cuda()
         self.denom = denom.cuda()
+        self.influence = influence.cuda()
+        self.infl_denom = infl_denom.cuda()
         for n in ldec_dicts:
             self.latent_decoders[n].load_state_dict(ldec_dicts[n])
     @property
@@ -300,6 +314,8 @@ class GaussianModelSQ(GaussianModel):
         self.percent_dense = training_args.percent_dense
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+        self.influence = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+        self.infl_denom = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
         self.lr_scaling = OrderedDict()
         for i,param in enumerate(self.param_names):
@@ -500,6 +516,8 @@ class GaussianModelSQ(GaussianModel):
 
         self.denom = self.denom[valid_points_mask]
         self.max_radii2D = self.max_radii2D[valid_points_mask]
+        self.influence = self.influence[valid_points_mask]
+        self.infl_denom = self.infl_denom[valid_points_mask]
 
     def cat_tensors_to_optimizer(self, tensors_dict):
         optimizable_tensors = {}
@@ -542,6 +560,9 @@ class GaussianModelSQ(GaussianModel):
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+
+        self.influence = torch.cat((self.influence,torch.zeros((new_xyz.shape[0]), device="cuda")))
+        self.infl_denom = torch.cat((self.infl_denom,torch.zeros((new_xyz.shape[0]), device="cuda")))
 
     def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
         n_init_points = self.get_xyz.shape[0]
@@ -631,3 +652,16 @@ class GaussianModelSQ(GaussianModel):
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
         # self.xyz_gradient_accum[update_filter] += viewspace_point_tensor.grad[update_filter,:2]
         self.denom[update_filter] += 1
+
+    @torch.no_grad()
+    def add_influence_stats(self, influence):
+        self.influence += influence
+        self.infl_denom[influence>0] += 1
+
+    @torch.no_grad()
+    def prune_influence(self, quantile_threshold):
+        threshold = torch.quantile(self.influence,quantile_threshold)
+        prune_mask = self.influence<=threshold
+        self.prune_points(prune_mask)
+        self.influence *= 0
+        self.infl_denom *= 0
